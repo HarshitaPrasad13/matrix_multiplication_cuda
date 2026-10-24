@@ -40,28 +40,6 @@ Throughput, counting 2N³ floating-point operations:
 
 A T4's FP32 peak is roughly 8 TFLOP/s, so the tiled kernel reaches around 10% of it.
 
-## What I found
-
-- **CPU loop order mattered a lot.** My first version used the textbook `i-j-k` order, which reads `B` down a column and misses cache constantly. Switching to `i-k-j` made the serial version about 11x faster at N=2048 (66 s down to 6 s) and about 4x faster at N=1024, with identical results. That also shrank the GPU speedup from ~2500x to ~220x, which is a fairer comparison.
-- **Tiling helps, but modestly.** The tiled kernel is about 1.5 to 1.7x faster than naive at N=512 and above. Each block loads a tile into shared memory once and reuses it 16 times, cutting global memory traffic. A simple 16x16 tile still leaves most of the hardware idle.
-- **Timings vary between runs.** The naive kernel at N=2048 took 42 to 50 ms across my runs, so treat the ratios as approximate.
-- **Small sizes aren't meaningful.** At N=128 both kernels finish in a few hundredths of a millisecond, so launch overhead and timer noise dominate.
-- **Threads gave no speedup at larger sizes.** The threaded version (4 threads) was about 1.0x at N=1024 and 2048. Colab's CPU has very few cores, which probably explains it, and I did not confirm the exact core count. (Edit this line after running `nproc`.)
-
-## Limitations
-
-- GPU timings leave out the host/device copies.
-- Each number is a single run, not an average.
-- Only 16x16 tiles were tested.
-- The thread count is hardcoded to 4 (`NUM_THREADS`), not matched to the machine.
-
-## Possible next steps
-
-- Try 32x32 tiles, or have each thread compute several outputs (register blocking).
-- Compare against cuBLAS.
-- Include copy time and average several runs.
-- Test threading on a machine with more cores.
-
 ## Files
 
 - `matmul.cu`: all four implementations, timing, and correctness checks
